@@ -4,7 +4,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import pyopencl as cl
 
-def rotate_image(source, target, img, angle = pi / 4):
+def rotate_image(source, img, px, py, angle = pi / 4):
     def rotated(x, y, px, py, t):
         v = np.array([x, y])
         p = np.array([px, py])
@@ -14,11 +14,11 @@ def rotate_image(source, target, img, angle = pi / 4):
         ])
         return rott @ (v - p) + p
 
+    target = np.zeros(source.shape, dtype=np.uint8)
     height, width, _ = source.shape
-
     for x in range(width):
         for y in range(height):
-            ox, oy = np.rint(rotated(x, y, width / 2, height / 2, -angle)).astype(int)
+            ox, oy = np.rint(rotated(x, y, px, py, -angle)).astype(int)
             if 0 <= ox < width and 0 <= oy < height:
                 target[y, x] = source[oy, ox]
 
@@ -48,21 +48,22 @@ def main():
     kernel_source = """
         __kernel void rotate_from_pivot(
             __global const uchar *source,
-            __global uchar *target)
+            __global uchar *target,
+            int px,
+            int py,
+            float t)
         {
             // TODO: would be nice to write the kernel in its own .cl file
             // TODO: Use opencl vectors and matrices like this:
             // uchar2 v = (float2)(x, y);
 
+            t = -t;
             int x = get_global_id(0);
             int y = get_global_id(1);
             int width = get_global_size(0);
             int height = get_global_size(1);
-            float t = M_PI_4;
             float cost = cos(t);
             float sint = sin(t);
-            int px = width / 2;
-            int py = height / 2;
             int ox = round(cost * (x - px) - sint * (y - py) + px);
             int oy = round(sint * (x - px) + cost * (y - py) + py);
             if (0 <= ox && ox < width && 0 <= oy && oy < height) {
@@ -76,12 +77,18 @@ def main():
 
     program = cl.Program(context, kernel_source).build()
     kernel = program.rotate_from_pivot
-    kernel.set_args(source_d, target_d)
+    px = np.int32(width / 2)
+    py = np.int32(height / 2)
+    angle = np.float32(pi / 4)
+    kernel.set_args(source_d, target_d, px, py, angle)
     cl.enqueue_nd_range_kernel(queue, kernel, (width, height), (1, 1))
     target = np.zeros(source.shape, dtype=np.uint8)
     cl.enqueue_copy(queue, target, target_d)
-
+    target_np = rotate_image(source, img, px, py, angle)
+    show_image(target_np)
     show_image(target)
+    # TODO: The assert does not pass
+    # assert np.array_equal(target, target_np), "Not correctly rotated"
 
 if __name__ == '__main__':
     main()
