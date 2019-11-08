@@ -29,7 +29,7 @@ def show_image(image):
     ax.imshow(image, cmap='gray')
     plt.show()
 
-def main():
+def main_rotate_image():
     platform_list = cl.get_platforms()
     devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
     context = cl.Context(devices=devices)
@@ -90,5 +90,34 @@ def main():
     # TODO: The assert does not pass
     # assert np.array_equal(target, target_np), "Not correctly rotated"
 
+def main_print_info():
+    platform = cl.get_platforms()[0]
+    device = platform.get_devices(device_type=cl.device_type.GPU)[0]
+
+    def print_info(obj, params_obj, exceptions=[]):
+        obj_params = [
+            p for p in dir(params_obj)
+            if p == str.upper(p) and p not in exception
+        ]
+
+        for param in obj_params:
+            p = getattr(params_obj, param)
+            print(f"{param}: {obj.get_info(p)}\n")
+
+    print("Platform Information\n\n")
+    print_info(platform, cl.platform_info)
+    print("\n\nDevice Information\n\n")
+    exceptions = [
+        "EXT_MEM_PADDING_IN_BYTES_QCOM",
+        "GLOBAL_VARIABLE_PREFERRED_TOTAL_SIZE",
+        "HALF_FP_CONFIG",
+        "IL_VERSION",
+        "MAX_GLOBAL_VARIABLE_SIZE",
+        "MAX_NUM_SUB_GROUPS",
+        # TODO: See what are the parameters that fail in collab
+    ]
+    print_info(device, cl.device_info, exceptions)
+
 if __name__ == '__main__':
-    main()
+    # main_rotate_image()
+    main_print_info()
