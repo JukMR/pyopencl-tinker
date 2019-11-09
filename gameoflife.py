@@ -36,6 +36,7 @@ def show_image(image):
     plt.show()
 
 def main_np():
+    k = 16
     N = 32
     frame = np.zeros((N, N)).astype(np.uint8)
     frame[16, :] = 255
@@ -43,5 +44,42 @@ def main_np():
         show_image(frame)
         frame = next_frame(frame)
 
+def main_gpu():
+    k = 16
+    N = 32
+    frame = np.zeros((N, N), dtype=np.uint8)
+    frame[16, :] = 255
+
+    # GPU Initialization
+    platform_list = cl.get_platforms()
+    devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
+    context = cl.Context(devices=devices)
+    queue = cl.CommandQueue(context)
+    mf = cl.mem_flags
+    frame0_d = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=frame)
+    frame1_d = cl.Buffer(context, mf.READ_WRITE, size=frame.nbytes)
+    current_frame = 0
+
+    kernel_file = open("gameoflife.cl", "r")
+    kernel_source = kernel_file.read()
+    kernel_file.close()
+    program = cl.Program(context, kernel_source).build()
+    kernel = program.next_cell_state
+    for i in range(k):
+        show_image(frame)
+        if current_frame == 0:
+            kernel.set_args(frame0_d, frame1_d)
+        elif current_frame == 1:
+            kernel.set_args(frame1_d, frame0_d)
+        cl.enqueue_nd_range_kernel(queue, kernel, (N, N), (1, 1))
+        import time; time.sleep(0.2)
+        cl.enqueue_copy(
+            queue, frame, frame1_d if current_frame == 0 else frame0_d
+        )
+        # TODO: clFinish
+        print("frame1_d" if current_frame == 0 else "frame0_d")
+        # TODO assert
+        current_frame = (current_frame + 1) % 2
 if __name__ == '__main__':
-    main_np()
+    # main_np()
+    main_gpu()
