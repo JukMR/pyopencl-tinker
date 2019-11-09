@@ -31,9 +31,9 @@ def next_frame(frame):
 
     return new_frame
 
-def show_image(image):
+def show_image(image, interval=0.01):
     plt.imshow(image, cmap='gray')
-    plt.show()
+    plt.pause(interval)
 
 def main_np():
     k = 16
@@ -72,7 +72,6 @@ def main_gpu():
         elif current_frame == 1:
             kernel.set_args(frame1_d, frame0_d)
         cl.enqueue_nd_range_kernel(queue, kernel, (N, N), (1, 1))
-        import time; time.sleep(0.2)
         cl.enqueue_copy(
             queue, frame, frame1_d if current_frame == 0 else frame0_d
         )
