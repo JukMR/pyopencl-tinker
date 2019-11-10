@@ -74,8 +74,7 @@ def main_gpu():
         cl.enqueue_nd_range_kernel(queue, kernel, (N, N), (1, 1))
         cl.enqueue_copy(
             queue, frame, frame1_d if current_frame == 0 else frame0_d
-        )
-        # TODO: clFinish
+        ) # TODO: .wait() clBarrier, clFinish, do we need synchronization here?
         print("frame1_d" if current_frame == 0 else "frame0_d")
         # TODO assert
         current_frame = (current_frame + 1) % 2
