@@ -54,7 +54,7 @@ def main_gpu():
     platform_list = cl.get_platforms()
     devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
     context = cl.Context(devices=devices)
-    queue = cl.CommandQueue(context)
+    queue = cl.CommandQueue(context) # In order
     mf = cl.mem_flags
     frame0_d = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=frame)
     frame1_d = cl.Buffer(context, mf.READ_WRITE, size=frame.nbytes)
@@ -74,7 +74,7 @@ def main_gpu():
         cl.enqueue_nd_range_kernel(queue, kernel, (N, N), (1, 1))
         cl.enqueue_copy(
             queue, frame, frame1_d if current_frame == 0 else frame0_d
-        ) # TODO: .wait() clBarrier, clFinish, do we need synchronization here?
+        ) # by default is_blocking=True so it blocks here
         print("frame1_d" if current_frame == 0 else "frame0_d")
         # TODO assert
         current_frame = (current_frame + 1) % 2

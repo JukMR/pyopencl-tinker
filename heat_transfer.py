@@ -72,7 +72,7 @@ def main_gpu():
     platform_list = cl.get_platforms()
     devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
     context = cl.Context(devices=devices)
-    queue = cl.CommandQueue(context)
+    queue = cl.CommandQueue(context) # TODO: Add profiling options
     mf = cl.mem_flags
     temps0_d = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=temps)
     sources_d = cl.Buffer(context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=sources)
