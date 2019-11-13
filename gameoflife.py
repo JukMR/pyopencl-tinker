@@ -4,6 +4,16 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import pyopencl as cl
 
+def show_image(image, interval=0.01):
+    plt.imshow(image, cmap='gray')
+    plt.pause(interval)
+
+def init_frame(N, k, alive_cells):
+    frame = np.zeros((N, N)).astype(np.uint8)
+    for cell in alive_cells:
+        frame[cell] = 255
+    return frame
+
 def next_frame(frame):
     state = frame != 0
     N = state.shape[0]
@@ -31,42 +41,36 @@ def next_frame(frame):
 
     return new_frame
 
-def show_image(image, interval=0.01):
-    plt.imshow(image, cmap='gray')
-    plt.pause(interval)
-
-def main_np():
-    k = 16
-    N = 32
-    frame = np.zeros((N, N)).astype(np.uint8)
-    frame[16, :] = 255
-    for i in range(16):
+def main_np(N, k, alive_cells):
+    frame = init_frame(N, k, alive_cells)
+    for i in range(k):
         show_image(frame)
         frame = next_frame(frame)
 
-def main_gpu():
-    k = 16
-    N = 32
-    frame = np.zeros((N, N), dtype=np.uint8)
-    frame[16, :] = 255
-
-    # GPU Initialization
+def main_gpu(N, k, alive_cells):
+    # Prepare OpenCL
     platform_list = cl.get_platforms()
     devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
     context = cl.Context(devices=devices)
     queue = cl.CommandQueue(context) # In order
+
+    # Prepare Input
+    frame = init_frame(N, k, alive_cells)
+
+    # Copy Input
     mf = cl.mem_flags
     frame0_d = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=frame)
     frame1_d = cl.Buffer(context, mf.READ_WRITE, size=frame.nbytes)
     current_frame = 0
 
+    # Run
     kernel_file = open("gameoflife.cl", "r")
     kernel_source = kernel_file.read()
     kernel_file.close()
     program = cl.Program(context, kernel_source).build()
     kernel = program.next_cell_state
+    show_image(frame)
     for i in range(k):
-        show_image(frame)
         if current_frame == 0:
             kernel.set_args(frame0_d, frame1_d)
         elif current_frame == 1:
@@ -75,9 +79,12 @@ def main_gpu():
         cl.enqueue_copy(
             queue, frame, frame1_d if current_frame == 0 else frame0_d
         ) # by default is_blocking=True so it blocks here
-        print("frame1_d" if current_frame == 0 else "frame0_d")
-        # TODO assert
         current_frame = (current_frame + 1) % 2
+        show_image(frame)
+
 if __name__ == '__main__':
-    # main_np()
-    main_gpu()
+    k = 16
+    N = 32
+    alive_cells = [(16, i) for i in range(N)]
+    main_np(N, k, alive_cells)
+    main_gpu(N, k, alive_cells)

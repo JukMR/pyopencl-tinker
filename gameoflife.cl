@@ -18,14 +18,14 @@ __kernel void next_cell_state(
     int yd = y + 1;
     uchar is_alive = frame[y * M + x];
 
-    neighbours += is_valid(yu, xl, N, M) ? !!frame[yu * M + xl] : 0;
-    neighbours += is_valid(yu, x, N, M) ? !!frame[yu * M + x] : 0;
-    neighbours += is_valid(yu, xr, N, M) ? !!frame[yu * M + xr] : 0;
-    neighbours += is_valid(y, xl, N, M) ? !!frame[y * M + xl] : 0;
-    neighbours += is_valid(y, xr, N, M) ? !!frame[y * M + xr] : 0;
-    neighbours += is_valid(yd, xl, N, M) ? !!frame[yd * M + xl] : 0;
-    neighbours += is_valid(yd, x, N, M) ? !!frame[yd * M + x] : 0;
-    neighbours += is_valid(yd, xr, N, M) ? !!frame[yd * M + xr] : 0;
+    neighbours += is_valid(yu, xl, N, M) ? (frame[yu * M + xl] != 0) : 0;
+    neighbours += is_valid(yu, x, N, M) ? (frame[yu * M + x] != 0) : 0;
+    neighbours += is_valid(yu, xr, N, M) ? (frame[yu * M + xr] != 0) : 0;
+    neighbours += is_valid(y, xl, N, M) ? (frame[y * M + xl] != 0) : 0;
+    neighbours += is_valid(y, xr, N, M) ? (frame[y * M + xr] != 0) : 0;
+    neighbours += is_valid(yd, xl, N, M) ? (frame[yd * M + xl] != 0) : 0;
+    neighbours += is_valid(yd, x, N, M) ? (frame[yd * M + x] != 0) : 0;
+    neighbours += is_valid(yd, xr, N, M) ? (frame[yd * M + xr] != 0) : 0;
 
     if (is_alive) {
         next_frame[y * M + x] = (2 <= neighbours && neighbours <= 3) ? 255 : 0;
