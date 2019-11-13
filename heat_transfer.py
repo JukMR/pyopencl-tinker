@@ -47,10 +47,7 @@ def main_np():
         show_image(temps)
         temps = next_temps(temps, sources)
 
-def main_gpu():
-    k = 160
-    N = 32
-    room_temp = 10.123
+def init_temps_sources(N = 32, k = 16, room_temp = 10.123):
     temps = np.zeros((N + 2, N + 2)).astype(np.double)
     sources = np.zeros((N + 2, N + 2)).astype(np.bool8)
 
@@ -68,6 +65,12 @@ def main_gpu():
     temps[0, :] = temps[-1, :] = temps[:, 0] = temps[:, -1] = room_temp
     sources[0, :] = sources[-1, :] = sources[:, 0] = sources[:, -1] = True
 
+    return temps, sources
+
+def main_gpu_iterative():
+    k = 16
+    N = 32
+    temps, sources = init_temps_sources(N, k)
     # GPU Initialization
     platform_list = cl.get_platforms()
     devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
@@ -98,6 +101,34 @@ def main_gpu():
         # TODO assert
         current_temps = (current_temps + 1) % 2
 
+def main_gpu_batch_global():
+    k = 320000
+    N = 32
+    temps, sources = init_temps_sources(N, k)
+    # GPU Initialization
+    platform_list = cl.get_platforms()
+    devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
+    context = cl.Context(devices=devices)
+    queue = cl.CommandQueue(context) # TODO: Add profiling options
+    mf = cl.mem_flags
+    temps_d = cl.Buffer(context, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=temps)
+    sources_d = cl.Buffer(context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=sources)
+
+    kernel_file = open("heat_transfer.cl", "r")
+    kernel_source = kernel_file.read()
+    kernel_file.close()
+    program = cl.Program(context, kernel_source).build()
+    kernel = program.batch_cell_temp
+    show_image(temps)
+    kernel.set_args(temps_d, sources_d, np.int32(k))
+    cl.enqueue_nd_range_kernel(queue, kernel, (N + 2, N + 2), (1, 1))
+    cl.enqueue_copy(queue, temps, temps_d)
+    show_image(temps)
+    from time import sleep; sleep(3)
+    # TODO assert
+
+
 if __name__ == '__main__':
     # main_np()
-    main_gpu()
+    # main_gpu_iterative()
+    main_gpu_batch_global()
