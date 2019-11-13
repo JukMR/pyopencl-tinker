@@ -4,7 +4,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import pyopencl as cl
 
-def rotate_image(source, img, px, py, angle = pi / 4):
+def main_rotate_image_cpu(source, img, px, py, angle = pi / 4):
     def rotated(x, y, px, py, t):
         v = np.array([x, y])
         p = np.array([px, py])
@@ -24,12 +24,12 @@ def rotate_image(source, img, px, py, angle = pi / 4):
 
     return target
 
-def show_image(image):
+def show_image(image, interval=0.01):
     fig, ax = plt.subplots()
     ax.imshow(image, cmap='gray')
     plt.show()
 
-def main_rotate_image():
+def main_rotate_image_gpu():
     platform_list = cl.get_platforms()
     devices = platform_list[0].get_devices(device_type=cl.device_type.GPU)
     context = cl.Context(devices=devices)
@@ -38,8 +38,6 @@ def main_rotate_image():
     img = Image.open("imagen.png")
     source = np.asarray(img).copy()
     height, width, _ = source.shape
-    # target = np.zeros(source.shape, dtype=np.uint8)
-    # target[:, :, 3] = 255
 
     mf = cl.mem_flags
     source_d = cl.Buffer(context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=source)
@@ -84,8 +82,6 @@ def main_rotate_image():
     cl.enqueue_nd_range_kernel(queue, kernel, (width, height), (1, 1))
     target = np.zeros(source.shape, dtype=np.uint8)
     cl.enqueue_copy(queue, target, target_d)
-    target_np = rotate_image(source, img, px, py, angle)
-    show_image(target_np)
     show_image(target)
     # TODO: The assert does not pass
     # assert np.array_equal(target, target_np), "Not correctly rotated"
@@ -94,30 +90,26 @@ def main_print_info():
     platform = cl.get_platforms()[0]
     device = platform.get_devices(device_type=cl.device_type.GPU)[0]
 
-    def print_info(obj, params_obj, exceptions=[]):
+    def print_info(obj, params_obj):
         obj_params = [
             p for p in dir(params_obj)
-            if p == str.upper(p) and p not in exception
+            if p == str.upper(p)
         ]
 
         for param in obj_params:
             p = getattr(params_obj, param)
-            print(f"{param}: {obj.get_info(p)}\n")
+            try:
+                print(f"\t {param}: {obj.get_info(p)}\n")
+            except:
+                print(f"\t [{param}] not available\n")
 
     print("Platform Information\n\n")
     print_info(platform, cl.platform_info)
+
     print("\n\nDevice Information\n\n")
-    exceptions = [
-        "EXT_MEM_PADDING_IN_BYTES_QCOM",
-        "GLOBAL_VARIABLE_PREFERRED_TOTAL_SIZE",
-        "HALF_FP_CONFIG",
-        "IL_VERSION",
-        "MAX_GLOBAL_VARIABLE_SIZE",
-        "MAX_NUM_SUB_GROUPS",
-        # TODO: See what are the parameters that fail in collab
-    ]
-    print_info(device, cl.device_info, exceptions)
+    print_info(device, cl.device_info)
 
 if __name__ == '__main__':
-    # main_rotate_image()
-    main_print_info()
+    # main_rotate_image_cpu()
+    main_rotate_image_gpu()
+    # main_print_info()
