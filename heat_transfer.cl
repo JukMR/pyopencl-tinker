@@ -22,7 +22,7 @@ __kernel void next_cell_temp(
 __kernel void batch_cell_temp(
     __global double *temps,
     __global const uchar *sources,
-    int k // TODO: Must be __private
+    int k
 ) {
     int x = get_global_id(0);
     int y = get_global_id(1);

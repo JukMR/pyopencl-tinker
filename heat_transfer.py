@@ -106,7 +106,7 @@ def main_gpu_batch_global():
     kernel = program.batch_cell_temp
     show_image(temps)
     kernel.set_args(temps_d, sources_d, np.int32(k))
-    cl.enqueue_nd_range_kernel(queue, kernel, (N + 2, N + 2), (1, 1))
+    cl.enqueue_nd_range_kernel(queue, kernel, (N + 2, N + 2), None)
     cl.enqueue_copy(queue, temps, temps_d)
     show_image(temps)
     # TODO assert
